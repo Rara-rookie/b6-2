@@ -1,0 +1,28 @@
+{% extends "base.html" %}
+
+{% block title %}메모 목록{% endblock %}
+
+{% block content %}
+<h1>메모 목록</h1>
+
+<form method="get" action="/memos">
+  <input type="text" name="q" placeholder="제목 검색" value="{{ q or '' }}">
+  <button type="submit">검색</button>
+  {% if q %}
+  <a href="/memos">전체 보기</a>
+  {% endif %}
+</form>
+
+<ul>
+  {% for memo in memos %}
+  <li>
+    {{ memo.title }}
+    <a href="/memos/{{ memo.id }}">상세보기</a>
+  </li>
+  {% else %}
+  <li>메모가 없습니다.</li>
+  {% endfor %}
+</ul>
+
+<p><a href="/memos/new">새 메모 작성</a></p>
+{% endblock %}

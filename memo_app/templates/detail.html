@@ -1,0 +1,25 @@
+{% extends "base.html" %}
+
+{% block title %}메모 상세{% endblock %}
+
+{% block content %}
+<h1>메모 상세</h1>
+
+<article>
+  <h2>{{ memo.title }}</h2>
+  <p><strong>ID:</strong> {{ memo.id }}</p>
+  <p><strong>작성일시:</strong> {{ memo.created_at }}</p>
+  <div>
+    <strong>내용:</strong>
+    <p style="white-space: pre-wrap;">{{ memo.content }}</p>
+  </div>
+</article>
+
+<nav>
+  <a href="/memos/{{ memo.id }}/edit">수정</a>
+  <form action="/memos/{{ memo.id }}/delete" method="post" style="display: inline;">
+    <button type="submit">삭제</button>
+  </form>
+  <a href="/memos">목록으로 돌아가기</a>
+</nav>
+{% endblock %}

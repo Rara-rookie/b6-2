@@ -1,0 +1,458 @@
+{
+  "package": "memo_app",
+  "entry": "memo_app.main",
+  "decisions": [
+    "도메인은 메모(Memo). 필드: id(int PK, 1부터 증가), title(str), content(str), created_at(str ISO)",
+    "created_at 은 datetime.now().isoformat(timespec='seconds') 로 저장",
+    "DB 파일은 작업 폴더의 database.db (sqlite:///database.db)",
+    "시드 데이터 없음. 앱 시작 시 빈 테이블로 시작한다",
+    "id 는 SQLite AUTOINCREMENT 로 1부터 증가하는 정수",
+    "존재하지 않는 메모 상세/수정 조회 시 templates/not_found.html 을 status_code=404 로 렌더한다",
+    "등록 성공 후 GET /memos/{id} 로 303 리다이렉트, 수정 성공 후 GET /memos/{id} 로 303, 삭제 성공 후 GET /memos 로 303",
+    "빈 title 또는 빈 content 로 등록/수정 시 폼을 status_code=400 으로 다시 렌더하며 error 메시지 '제목과 내용을 모두 입력하세요.' 를 표시(리다이렉트 안 함)",
+    "목록 검색은 GET /memos?q=키워드 로 title LIKE '%키워드%' 필터. q 없으면 전체",
+    "홈 GET / 은 templates/home.html 렌더, '메모 목록 보기'(/memos)와 '새 메모 작성'(/memos/new) 링크 포함"
+  ],
+  "forbidden": [],
+  "requirements": [
+    "fastapi",
+    "uvicorn",
+    "sqlalchemy",
+    "jinja2",
+    "python-multipart"
+  ],
+  "serve": {
+    "app": "memo_app.main:app"
+  },
+  "modules": [
+    {
+      "path": "__init__.py",
+      "purpose": "패키지 마커.",
+      "covers": [],
+      "imports_from": [],
+      "api": []
+    },
+    {
+      "path": "database.py",
+      "purpose": "SQLAlchemy 엔진/세션 팩토리와 Depends 용 세션 제공자.",
+      "covers": [
+        "9"
+      ],
+      "imports_from": [],
+      "api": [
+        "engine: Engine",
+        "SessionLocal: sessionmaker",
+        "Base: DeclarativeMeta",
+        "def init_db() -> None",
+        "def get_db() -> Iterator[Session]"
+      ]
+    },
+    {
+      "path": "models/__init__.py",
+      "purpose": "models 패키지 마커.",
+      "covers": [],
+      "imports_from": [],
+      "api": []
+    },
+    {
+      "path": "models/memo.py",
+      "purpose": "Memo ORM 모델 정의.",
+      "covers": [
+        "2",
+        "5",
+        "9"
+      ],
+      "imports_from": [
+        "database.py"
+      ],
+      "api": [
+        "class Memo(Base): __tablename__='memos'; id: int; title: str; content: str; created_at: str"
+      ]
+    },
+    {
+      "path": "schemas.py",
+      "purpose": "요청/응답 DTO 정의.",
+      "covers": [
+        "6"
+      ],
+      "imports_from": [],
+      "api": [
+        "class MemoCreate: def __init__(self, title: str, content: str)",
+        "class MemoView: def __init__(self, id: int, title: str, content: str, created_at: str)"
+      ]
+    },
+    {
+      "path": "repositories/__init__.py",
+      "purpose": "repositories 패키지 마커.",
+      "covers": [],
+      "imports_from": [],
+      "api": []
+    },
+    {
+      "path": "repositories/memo_repository.py",
+      "purpose": "Memo DB 접근(CRUD, 검색).",
+      "covers": [
+        "8",
+        "9"
+      ],
+      "imports_from": [
+        "models/memo.py"
+      ],
+      "api": [
+        "def list_memos(db: Session, q: str | None = None) -> list[Memo]",
+        "def get_memo(db: Session, memo_id: int) -> Memo | None",
+        "def create_memo(db: Session, title: str, content: str, created_at: str) -> Memo",
+        "def update_memo(db: Session, memo_id: int, title: str, content: str) -> Memo | None",
+        "def delete_memo(db: Session, memo_id: int) -> bool"
+      ]
+    },
+    {
+      "path": "services/__init__.py",
+      "purpose": "services 패키지 마커.",
+      "covers": [],
+      "imports_from": [],
+      "api": []
+    },
+    {
+      "path": "services/memo_service.py",
+      "purpose": "메모 비즈니스 로직과 검증.",
+      "covers": [
+        "5",
+        "8"
+      ],
+      "imports_from": [
+        "repositories/memo_repository.py",
+        "schemas.py"
+      ],
+      "api": [
+        "class ValidationError(Exception): def __init__(self, message: str)",
+        "def to_view(memo: Memo) -> MemoView",
+        "def list_memos(db: Session, q: str | None = None) -> list[MemoView]",
+        "def get_memo(db: Session, memo_id: int) -> MemoView | None",
+        "def create_memo(db: Session, title: str, content: str) -> MemoView",
+        "def update_memo(db: Session, memo_id: int, title: str, content: str) -> MemoView | None",
+        "def delete_memo(db: Session, memo_id: int) -> bool"
+      ]
+    },
+    {
+      "path": "routers/__init__.py",
+      "purpose": "routers 패키지 마커.",
+      "covers": [],
+      "imports_from": [],
+      "api": []
+    },
+    {
+      "path": "routers/memo_router.py",
+      "purpose": "메모 화면/폼 라우팅과 PRG 처리.",
+      "covers": [
+        "3",
+        "4",
+        "5",
+        "6",
+        "7"
+      ],
+      "imports_from": [
+        "services/memo_service.py",
+        "database.py",
+        "templates.py"
+      ],
+      "api": [
+        "router: APIRouter"
+      ]
+    },
+    {
+      "path": "templates.py",
+      "purpose": "__file__ 기준 Jinja2Templates 인스턴스 제공.",
+      "covers": [
+        "3"
+      ],
+      "imports_from": [],
+      "api": [
+        "templates: Jinja2Templates"
+      ]
+    },
+    {
+      "path": "main.py",
+      "purpose": "FastAPI 앱 생성, 라우터 등록, 홈 라우트, DB 초기화.",
+      "covers": [
+        "1",
+        "4"
+      ],
+      "imports_from": [
+        "database.py",
+        "routers/memo_router.py",
+        "templates.py"
+      ],
+      "api": [
+        "app: FastAPI"
+      ]
+    },
+    {
+      "path": "templates/base.html",
+      "purpose": "공통 레이아웃.",
+      "covers": [
+        "3"
+      ],
+      "imports_from": [],
+      "api": []
+    },
+    {
+      "path": "templates/home.html",
+      "purpose": "홈 화면(목적 설명과 링크 2개).",
+      "covers": [
+        "4"
+      ],
+      "imports_from": [],
+      "api": []
+    },
+    {
+      "path": "templates/list.html",
+      "purpose": "메모 목록과 검색 폼.",
+      "covers": [
+        "5"
+      ],
+      "imports_from": [],
+      "api": []
+    },
+    {
+      "path": "templates/detail.html",
+      "purpose": "메모 상세와 수정/삭제/목록 링크.",
+      "covers": [
+        "5"
+      ],
+      "imports_from": [],
+      "api": []
+    },
+    {
+      "path": "templates/form.html",
+      "purpose": "등록/수정 공용 폼.",
+      "covers": [
+        "6"
+      ],
+      "imports_from": [],
+      "api": []
+    },
+    {
+      "path": "templates/not_found.html",
+      "purpose": "데이터 없음 안내.",
+      "covers": [
+        "5"
+      ],
+      "imports_from": [],
+      "api": []
+    }
+  ],
+  "setup": [],
+  "smoke": [
+    {
+      "http": "GET /",
+      "status": 200,
+      "expect": "ok",
+      "contains": "새 메모 작성",
+      "covers": [
+        "1",
+        "4"
+      ],
+      "why": "홈 화면이 렌더되고 등록 화면 링크가 있는지 확인"
+    },
+    {
+      "http": "GET /memos",
+      "status": 200,
+      "expect": "ok",
+      "contains": "메모 목록",
+      "covers": [
+        "5"
+      ],
+      "why": "빈 목록도 목록 화면이 렌더되는지 확인"
+    },
+    {
+      "http": "POST /memos",
+      "form": {
+        "title": "",
+        "content": "내용만 있음"
+      },
+      "status": 400,
+      "expect": "error",
+      "contains": "제목과 내용을 모두 입력하세요.",
+      "covers": [
+        "6"
+      ],
+      "why": "빈 title 검증 시 400과 오류 메시지 표시, 리다이렉트 안 함"
+    },
+    {
+      "http": "POST /memos",
+      "form": {
+        "title": "제목만 있음",
+        "content": ""
+      },
+      "status": 400,
+      "expect": "error",
+      "contains": "제목과 내용을 모두 입력하세요.",
+      "covers": [
+        "6"
+      ],
+      "why": "빈 content 검증 시 400과 오류 메시지 표시"
+    },
+    {
+      "http": "POST /memos",
+      "form": {
+        "title": "오늘 배운 것 정리",
+        "content": "라우터 서비스 저장소 분리"
+      },
+      "status": 303,
+      "location": "/memos/1",
+      "expect": "ok",
+      "covers": [
+        "3",
+        "7",
+        "9"
+      ],
+      "why": "첫 등록은 id 1, 등록 후 상세로 303 리다이렉트"
+    },
+    {
+      "http": "GET /memos/1",
+      "status": 200,
+      "expect": "ok",
+      "contains": "라우터 서비스 저장소 분리",
+      "covers": [
+        "5",
+        "9"
+      ],
+      "why": "등록한 메모의 내용이 상세 화면에 전체 필드로 표시되는지 확인"
+    },
+    {
+      "http": "POST /memos",
+      "form": {
+        "title": "내일 할 일",
+        "content": "테스트 작성하기"
+      },
+      "status": 303,
+      "location": "/memos/2",
+      "expect": "ok",
+      "covers": [
+        "3",
+        "7",
+        "9"
+      ],
+      "why": "두 번째 등록은 id 2, 상세로 303"
+    },
+    {
+      "http": "POST /memos",
+      "form": {
+        "title": "장보기 목록",
+        "content": "우유 계란"
+      },
+      "status": 303,
+      "location": "/memos/3",
+      "expect": "ok",
+      "covers": [
+        "3",
+        "7"
+      ],
+      "why": "세 번째 등록은 id 3, 검색 시험을 위한 데이터 준비"
+    },
+    {
+      "http": "GET /memos",
+      "status": 200,
+      "expect": "ok",
+      "contains": "장보기 목록",
+      "covers": [
+        "5"
+      ],
+      "why": "등록된 세 메모가 모두 목록에 보이는지 확인"
+    },
+    {
+      "http": "GET /memos?q=할 일",
+      "status": 200,
+      "expect": "ok",
+      "contains": "내일 할 일",
+      "covers": [
+        "5"
+      ],
+      "why": "title LIKE 검색이 '할 일' 포함 메모만 반환하는지 확인 (id 2)"
+    },
+    {
+      "http": "POST /memos/2/edit",
+      "form": {
+        "title": "내일 할 일 수정됨",
+        "content": "실제로는 오늘 할 일"
+      },
+      "status": 303,
+      "location": "/memos/2",
+      "expect": "ok",
+      "covers": [
+        "3",
+        "6",
+        "7"
+      ],
+      "why": "수정 후 상세로 303 리다이렉트"
+    },
+    {
+      "http": "GET /memos/2",
+      "status": 200,
+      "expect": "ok",
+      "contains": "실제로는 오늘 할 일",
+      "covers": [
+        "5",
+        "9"
+      ],
+      "why": "수정된 내용이 상세에 반영되는지 확인"
+    },
+    {
+      "http": "POST /memos/2/edit",
+      "form": {
+        "title": "",
+        "content": "빈 제목 수정"
+      },
+      "status": 400,
+      "expect": "error",
+      "contains": "제목과 내용을 모두 입력하세요.",
+      "covers": [
+        "6"
+      ],
+      "why": "수정 시에도 빈 title 검증되고 400 반환"
+    },
+    {
+      "http": "POST /memos/3/delete",
+      "status": 303,
+      "location": "/memos",
+      "expect": "ok",
+      "covers": [
+        "3",
+        "7"
+      ],
+      "why": "삭제 후 목록으로 303 리다이렉트"
+    },
+    {
+      "http": "GET /memos/3",
+      "status": 404,
+      "expect": "error",
+      "contains": "찾을 수 없습니다",
+      "covers": [
+        "5"
+      ],
+      "why": "삭제된 메모 상세 조회 시 404 not_found 화면"
+    },
+    {
+      "http": "GET /memos/999",
+      "status": 404,
+      "expect": "error",
+      "contains": "찾을 수 없습니다",
+      "covers": [
+        "5"
+      ],
+      "why": "존재하지 않는 id 조회 시 404 안내 화면"
+    }
+  ],
+  "fixtures": [],
+  "docs": [
+    {
+      "path": "README.md",
+      "sections": [
+        "가상환경 생성",
+        "패키지 설치",
+        "서버 실행"
+      ]
+    }
+  ]
+}
